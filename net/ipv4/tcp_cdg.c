@@ -145,7 +145,7 @@ static void tcp_cdg_hystart_update(struct sock *sk)
 		return;
 
 	if (hystart_detect & HYSTART_ACK_TRAIN) {
-		u32 now_us = div_u64(local_clock(), NSEC_PER_USEC);
+		u32 now_us = local_clock() / NSEC_PER_USEC;
 
 		if (ca->last_ack == 0 || !tcp_is_cwnd_limited(sk)) {
 			ca->last_ack = now_us;
@@ -264,7 +264,7 @@ static void tcp_cdg_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	u32 prior_snd_cwnd;
 	u32 incr;
 
-	if (tcp_in_slow_start(tp) && hystart_detect)
+	if (tp->snd_cwnd < tp->snd_ssthresh && hystart_detect)
 		tcp_cdg_hystart_update(sk);
 
 	if (after(ack, ca->rtt_seq) && ca->rtt.v64) {
