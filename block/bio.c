@@ -1777,7 +1777,7 @@ static inline bool bio_remaining_done(struct bio *bio)
 void bio_endio(struct bio *bio)
 {
 again:
-	if (unlikely(!bio_remaining_done(bio)))
+	if (!bio_remaining_done(bio))
 		return;
 
 	/*
