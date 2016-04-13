@@ -440,8 +440,6 @@ struct request_queue {
 	/*
 	 * for flush operations
 	 */
-	unsigned int		flush_flags;
-	unsigned int		flush_not_queueable:1;
 	struct blk_flush_queue	*fq;
 
 	struct list_head	requeue_list;
@@ -501,6 +499,7 @@ struct request_queue {
 #define QUEUE_FLAG_FAST        23	/* fast block device (e.g. ram based) */
 #define QUEUE_FLAG_WC	       24	/* Write back caching */
 #define QUEUE_FLAG_FUA	       25	/* device supports FUA writes */
+#define QUEUE_FLAG_FLUSH_NQ    26	/* flush not queueuable */
 
 #define QUEUE_FLAG_DEFAULT	((1 << QUEUE_FLAG_IO_STAT) |		\
 				 (1 << QUEUE_FLAG_STACKABLE)	|	\
@@ -1377,7 +1376,7 @@ static inline unsigned int block_size(struct block_device *bdev)
 
 static inline bool queue_flush_queueable(struct request_queue *q)
 {
-	return !q->flush_not_queueable;
+	return !test_bit(QUEUE_FLAG_FLUSH_NQ, &q->queue_flags);
 }
 
 typedef struct {struct page *v;} Sector;
