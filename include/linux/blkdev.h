@@ -89,7 +89,7 @@ struct request {
 	struct list_head queuelist;
 	union {
 		struct call_single_data csd;
-		unsigned long fifo_time;
+		u64 fifo_time;
 	};
 
 	struct request_queue *q;
