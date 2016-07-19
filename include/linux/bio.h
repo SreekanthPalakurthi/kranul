@@ -712,8 +712,6 @@ static inline struct bio *bio_list_get(struct bio_list *bl)
  * and the bvec_slabs[].
  */
 #define BIO_POOL_SIZE 2
-#define BIOVEC_NR_POOLS 6
-#define BIOVEC_MAX_IDX	(BIOVEC_NR_POOLS - 1)
 
 struct bio_set {
 	struct kmem_cache *bio_slab;
