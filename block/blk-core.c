@@ -1152,6 +1152,7 @@ static struct request *__get_request(struct request_list *rl, int rw_flags,
 
 	blk_rq_init(q, rq);
 	blk_rq_set_rl(rq, rl);
+	blk_rq_set_prio(rq, ioc);
 	rq->cmd_flags = rw_flags | REQ_ALLOCED;
 
 	/* init elvpriv */
@@ -1710,7 +1711,8 @@ void init_request_from_bio(struct request *req, struct bio *bio)
 
 	req->errors = 0;
 	req->__sector = bio->bi_iter.bi_sector;
-	req->ioprio = bio_prio(bio);
+	if (ioprio_valid(bio_prio(bio)))
+		req->ioprio = bio_prio(bio);
 	blk_rq_bio_prep(req->q, req, bio);
 }
 EXPORT_SYMBOL(init_request_from_bio);
