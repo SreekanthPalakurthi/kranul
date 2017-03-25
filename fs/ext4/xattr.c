@@ -220,7 +220,6 @@ ext4_xattr_check_block(struct inode *inode, struct buffer_head *bh)
 		return -EFSCORRUPTED;
 	if (buffer_verified(bh))
 		return 0;
-
 	if (!ext4_xattr_block_csum_verify(inode, bh))
 		return -EFSBADCRC;
 	error = ext4_xattr_check_names(BFIRST(bh), bh->b_data + bh->b_size,
@@ -599,6 +598,7 @@ ext4_xattr_release_block(handle_t *handle, struct inode *inode,
 			}
 		}
 
+		ext4_xattr_block_csum_set(inode, bh);
 		/*
 		 * Beware of this ugliness: Releasing of xattr block references
 		 * from different inodes can race and so we have to protect
@@ -952,6 +952,7 @@ inserted:
 					ce->e_reusable = 0;
 				ea_bdebug(new_bh, "reusing; refcount now=%d",
 					  ref);
+				ext4_xattr_block_csum_set(inode, new_bh);
 				unlock_buffer(new_bh);
 				error = ext4_handle_dirty_metadata(handle,
 								   inode,
