@@ -1293,11 +1293,11 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%d %d", &input_l, &input_r);
 
-	if (input_l < -84 || input_l > 40)
+	if (input_l < -40 || input_l > 20)
 		input_l = 0;
 
-	if (input_r < -84 || input_r > 40)
-        	input_r = 0;
+	if (input_r < -40 || input_r > 20)
+		input_r = 0;
 
 	snd_soc_write(sound_control_codec_ptr, MSM89XX_CDC_CORE_RX1_VOL_CTL_B2_CTL, input_l);
 	snd_soc_write(sound_control_codec_ptr, MSM89XX_CDC_CORE_RX2_VOL_CTL_B2_CTL, input_r);
@@ -1334,6 +1334,7 @@ static ssize_t mic_gain_show(struct kobject *kobj,
 
 static struct attribute *sound_control_attrs[] = {
 		&headphone_gain_attribute.attr,
+		&mic_gain_attribute.attr,
 		NULL,
 };
 
