@@ -2,8 +2,8 @@
  * Copyright (C) 2010 - 2017 Novatek, Inc.
  * Copyright (C) 2019 XiaoMi, Inc.
  *
- * $Revision: 14651 $
- * $Date: 2017-07-21 14:58:50 +0800 (周五, 21 七月 2017) $
+ * $Revision: 23175 $
+ * $Date: 2018-02-12 16:26:21 +0800 (周一, 12 二月 2018) $
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,8 +40,9 @@
 #if NVT_TOUCH_ESD_PROTECT
 #include <linux/jiffies.h>
 #endif /* #if NVT_TOUCH_ESD_PROTECT */
-
-#include "../lct_tp_gesture.h"
+/* add tp vendor information by yangjiangzhu  2018/3/19 start */
+extern char g_lcd_id[128];  
+/* add tp vendor information by yangjiangzhu  2018/3/19 end */
 
 #if NVT_TOUCH_ESD_PROTECT
 static struct delayed_work nvt_esd_check_work;
@@ -56,8 +57,6 @@ uint8_t esd_retry_max = 5;
 extern int32_t nvt_extra_proc_init(void);
 #endif
 
-extern char g_lcd_id[128];
-
 #if NVT_TOUCH_MP
 extern int32_t nvt_mp_proc_init(void);
 #endif
@@ -70,150 +69,13 @@ static struct workqueue_struct *nvt_wq;
 static struct workqueue_struct *nvt_fwu_wq;
 extern void Boot_Update_Firmware(struct work_struct *work);
 #endif
-extern bool ESD_TE_status;
+
 #if defined(CONFIG_FB)
 static int fb_notifier_callback(struct notifier_block *self, unsigned long event, void *data);
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
 static void nvt_ts_early_suspend(struct early_suspend *h);
 static void nvt_ts_late_resume(struct early_suspend *h);
 #endif
-
-static const struct nvt_ts_mem_map NT36772_memory_map = {
-	.EVENT_BUF_ADDR           = 0x11E00,
-	.RAW_PIPE0_ADDR           = 0x10000,
-	.RAW_PIPE0_Q_ADDR         = 0,
-	.RAW_PIPE1_ADDR           = 0x12000,
-	.RAW_PIPE1_Q_ADDR         = 0,
-	.BASELINE_ADDR            = 0x10E70,
-	.BASELINE_Q_ADDR          = 0,
-	.BASELINE_BTN_ADDR        = 0x12E70,
-	.BASELINE_BTN_Q_ADDR      = 0,
-	.DIFF_PIPE0_ADDR          = 0x10830,
-	.DIFF_PIPE0_Q_ADDR        = 0,
-	.DIFF_PIPE1_ADDR          = 0x12830,
-	.DIFF_PIPE1_Q_ADDR        = 0,
-	.RAW_BTN_PIPE0_ADDR       = 0x10E60,
-	.RAW_BTN_PIPE0_Q_ADDR     = 0,
-	.RAW_BTN_PIPE1_ADDR       = 0x12E60,
-	.RAW_BTN_PIPE1_Q_ADDR     = 0,
-	.DIFF_BTN_PIPE0_ADDR      = 0x10E68,
-	.DIFF_BTN_PIPE0_Q_ADDR    = 0,
-	.DIFF_BTN_PIPE1_ADDR      = 0x12E68,
-	.DIFF_BTN_PIPE1_Q_ADDR    = 0,
-	.READ_FLASH_CHECKSUM_ADDR = 0x14000,
-	.RW_FLASH_DATA_ADDR       = 0x14002,
-};
-
-static const struct nvt_ts_mem_map NT36525_memory_map = {
-	.EVENT_BUF_ADDR           = 0x11A00,
-	.RAW_PIPE0_ADDR           = 0x10000,
-	.RAW_PIPE0_Q_ADDR         = 0,
-	.RAW_PIPE1_ADDR           = 0x12000,
-	.RAW_PIPE1_Q_ADDR         = 0,
-	.BASELINE_ADDR            = 0x10B08,
-	.BASELINE_Q_ADDR          = 0,
-	.BASELINE_BTN_ADDR        = 0x12B08,
-	.BASELINE_BTN_Q_ADDR      = 0,
-	.DIFF_PIPE0_ADDR          = 0x1064C,
-	.DIFF_PIPE0_Q_ADDR        = 0,
-	.DIFF_PIPE1_ADDR          = 0x1264C,
-	.DIFF_PIPE1_Q_ADDR        = 0,
-	.RAW_BTN_PIPE0_ADDR       = 0x10634,
-	.RAW_BTN_PIPE0_Q_ADDR     = 0,
-	.RAW_BTN_PIPE1_ADDR       = 0x12634,
-	.RAW_BTN_PIPE1_Q_ADDR     = 0,
-	.DIFF_BTN_PIPE0_ADDR      = 0x10AFC,
-	.DIFF_BTN_PIPE0_Q_ADDR    = 0,
-	.DIFF_BTN_PIPE1_ADDR      = 0x12AFC,
-	.DIFF_BTN_PIPE1_Q_ADDR    = 0,
-	.READ_FLASH_CHECKSUM_ADDR = 0x14000,
-	.RW_FLASH_DATA_ADDR       = 0x14002,
-};
-
-static const struct nvt_ts_mem_map NT36870_memory_map = {
-	.EVENT_BUF_ADDR           = 0x25000,
-	.RAW_PIPE0_ADDR           = 0x20000,
-	.RAW_PIPE0_Q_ADDR         = 0x204C8,
-	.RAW_PIPE1_ADDR           = 0x23000,
-	.RAW_PIPE1_Q_ADDR         = 0x234C8,
-	.BASELINE_ADDR            = 0x21350,
-	.BASELINE_Q_ADDR          = 0x21818,
-	.BASELINE_BTN_ADDR        = 0x24350,
-	.BASELINE_BTN_Q_ADDR      = 0x24358,
-	.DIFF_PIPE0_ADDR          = 0x209B0,
-	.DIFF_PIPE0_Q_ADDR        = 0x20E78,
-	.DIFF_PIPE1_ADDR          = 0x239B0,
-	.DIFF_PIPE1_Q_ADDR        = 0x23E78,
-	.RAW_BTN_PIPE0_ADDR       = 0x20990,
-	.RAW_BTN_PIPE0_Q_ADDR     = 0x20998,
-	.RAW_BTN_PIPE1_ADDR       = 0x23990,
-	.RAW_BTN_PIPE1_Q_ADDR     = 0x23998,
-	.DIFF_BTN_PIPE0_ADDR      = 0x21340,
-	.DIFF_BTN_PIPE0_Q_ADDR    = 0x21348,
-	.DIFF_BTN_PIPE1_ADDR      = 0x24340,
-	.DIFF_BTN_PIPE1_Q_ADDR    = 0x24348,
-	.READ_FLASH_CHECKSUM_ADDR = 0x24000,
-	.RW_FLASH_DATA_ADDR       = 0x24002,
-};
-
-static const struct nvt_ts_mem_map NT36676F_memory_map = {
-	.EVENT_BUF_ADDR           = 0x11A00,
-	.RAW_PIPE0_ADDR           = 0x10000,
-	.RAW_PIPE0_Q_ADDR         = 0,
-	.RAW_PIPE1_ADDR           = 0x12000,
-	.RAW_PIPE1_Q_ADDR         = 0,
-	.BASELINE_ADDR            = 0x10B08,
-	.BASELINE_Q_ADDR          = 0,
-	.BASELINE_BTN_ADDR        = 0x12B08,
-	.BASELINE_BTN_Q_ADDR      = 0,
-	.DIFF_PIPE0_ADDR          = 0x1064C,
-	.DIFF_PIPE0_Q_ADDR        = 0,
-	.DIFF_PIPE1_ADDR          = 0x1264C,
-	.DIFF_PIPE1_Q_ADDR        = 0,
-	.RAW_BTN_PIPE0_ADDR       = 0x10634,
-	.RAW_BTN_PIPE0_Q_ADDR     = 0,
-	.RAW_BTN_PIPE1_ADDR       = 0x12634,
-	.RAW_BTN_PIPE1_Q_ADDR     = 0,
-	.DIFF_BTN_PIPE0_ADDR      = 0x10AFC,
-	.DIFF_BTN_PIPE0_Q_ADDR    = 0,
-	.DIFF_BTN_PIPE1_ADDR      = 0x12AFC,
-	.DIFF_BTN_PIPE1_Q_ADDR    = 0,
-	.READ_FLASH_CHECKSUM_ADDR = 0x14000,
-	.RW_FLASH_DATA_ADDR       = 0x14002,
-};
-
-#define NVT_ID_BYTE_MAX 6
-struct nvt_ts_trim_id_table {
-	uint8_t id[NVT_ID_BYTE_MAX];
-	uint8_t mask[NVT_ID_BYTE_MAX];
-	const struct nvt_ts_mem_map *mmap;
-	uint8_t carrier_system;
-};
-
-static const struct nvt_ts_trim_id_table trim_id_table[] = {
-	{.id = {0x55, 0x00, 0xFF, 0x00, 0x00, 0x00}, .mask = {1, 1, 0, 1, 1, 1},
-		.mmap = &NT36772_memory_map, .carrier_system = 0},
-	{.id = {0x55, 0x72, 0xFF, 0x00, 0x00, 0x00}, .mask = {1, 1, 0, 1, 1, 1},
-		.mmap = &NT36772_memory_map, .carrier_system = 0},
-	{.id = {0xAA, 0x00, 0xFF, 0x00, 0x00, 0x00}, .mask = {1, 1, 0, 1, 1, 1},
-		.mmap = &NT36772_memory_map, .carrier_system = 0},
-	{.id = {0xAA, 0x72, 0xFF, 0x00, 0x00, 0x00}, .mask = {1, 1, 0, 1, 1, 1},
-		.mmap = &NT36772_memory_map, .carrier_system = 0},
-	{.id = {0xFF, 0xFF, 0xFF, 0x72, 0x67, 0x03}, .mask = {0, 0, 0, 1, 1, 1},
-		.mmap = &NT36772_memory_map, .carrier_system = 0},
-	{.id = {0xFF, 0xFF, 0xFF, 0x70, 0x66, 0x03}, .mask = {0, 0, 0, 1, 1, 1},
-		.mmap = &NT36772_memory_map, .carrier_system = 0},
-	{.id = {0xFF, 0xFF, 0xFF, 0x70, 0x67, 0x03}, .mask = {0, 0, 0, 1, 1, 1},
-		.mmap = &NT36772_memory_map, .carrier_system = 0},
-	{.id = {0xFF, 0xFF, 0xFF, 0x72, 0x66, 0x03}, .mask = {0, 0, 0, 1, 1, 1},
-		.mmap = &NT36772_memory_map, .carrier_system = 0},
-	{.id = {0xFF, 0xFF, 0xFF, 0x25, 0x65, 0x03}, .mask = {0, 0, 0, 1, 1, 1},
-		.mmap = &NT36525_memory_map, .carrier_system = 0},
-	{.id = {0xFF, 0xFF, 0xFF, 0x70, 0x68, 0x03}, .mask = {0, 0, 0, 1, 1, 1},
-		.mmap = &NT36870_memory_map, .carrier_system = 1},
-	{.id = {0xFF, 0xFF, 0xFF, 0x76, 0x66, 0x03}, .mask = {0, 0, 0, 1, 1, 1},
-		.mmap = &NT36676F_memory_map, .carrier_system = 0}
-};
 
 #if TOUCH_KEY_NUM > 0
 const uint16_t touch_key_array[TOUCH_KEY_NUM] = {
@@ -268,6 +130,7 @@ int nvt_gesture_switch(struct input_dev *dev, unsigned int type, unsigned int co
 	}
 	return 0;
 }
+
 #endif
 
 static uint8_t bTouchIsAwake = 0;
@@ -492,18 +355,10 @@ int32_t nvt_check_fw_reset_state(RST_COMPLETE_STATE check_reset_state)
 		}
 
 		retry++;
-		if (check_reset_state <= RESET_STATE_REK) {
-			if (unlikely(retry > 50)) {
-				NVT_ERR("error, retry=%d, buf[1]=0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X\n", retry, buf[1], buf[2], buf[3], buf[4], buf[5]);
-				ret = -1;
-				break;
-			}
-		} else {
-			if(unlikely(retry > 100)) {
-				NVT_ERR("error, retry=%d, buf[1]=0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X\n", retry, buf[1], buf[2], buf[3], buf[4], buf[5]);
-				ret = -1;
-				break;
-			}
+		if(unlikely(retry > 100)) {
+			NVT_ERR("error, retry=%d, buf[1]=0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X\n", retry, buf[1], buf[2], buf[3], buf[4], buf[5]);
+			ret = -1;
+			break;
 		}
 	}
 
@@ -555,6 +410,11 @@ int32_t nvt_get_fw_info(void)
 	uint8_t buf[64] = {0};
 	uint32_t retry_count = 0;
 	int32_t ret = 0;
+/* add tp-fw information by yangjiangzhu  2018/3/12 start */
+#if	NVT_READ_TP_FW
+	char fw_version[64];
+#endif
+/* add tp-fw information by yangjiangzhu  2018/3/12 end */
 
 info_retry:
 
@@ -597,10 +457,23 @@ info_retry:
 	} else {
 		ret = 0;
 	}
-
+/* add tp-fw and vendor information by yangjiangzhu  2018/3/19 start */
+#if	NVT_READ_TP_FW
+		memset(fw_version, 0, sizeof(fw_version));
+		if (strstr(g_lcd_id,"shenchao nt36672a fhdplus video mode dsi panel") != NULL) {
+				sprintf(fw_version, "[FW]0x%02x,[IC]nvt36672_a", ts->fw_ver);
+				init_tp_fm_info(0, fw_version, "shenchao");
+			}
+			else {
+					sprintf(fw_version, "[FW]0x%02x,[IC]nvt36672_a", ts->fw_ver);
+					init_tp_fm_info(0, fw_version, "tianma");
+				 }
+#endif
+/* add tp-fw and vendor information by yangjiangzhu  2018/3/19 end */
+printk("yjz nvt_get_fw_info 1 \n");
 
 	nvt_read_pid();
-
+	
 	return ret;
 }
 
@@ -636,6 +509,10 @@ static ssize_t nvt_flash_read(struct file *file, char __user *buff, size_t count
 	}
 
 #if NVT_TOUCH_ESD_PROTECT
+	/*
+	 * stop esd check work to avoid case that 0x77 report righ after here to enable esd check again
+	 * finally lead to trigger esd recovery bootloader reset
+	 */
 	cancel_delayed_work_sync(&nvt_esd_check_work);
 	nvt_esd_check_enable(false);
 #endif /* #if NVT_TOUCH_ESD_PROTECT */
@@ -883,14 +760,20 @@ static void nvt_parse_dt(struct device *dev)
 {
 	struct device_node *np = dev->of_node;
 
-	ts->irq_gpio = of_get_named_gpio_flags(np, "novatek,irq-gpio", 0, &ts->irq_flags);
-	NVT_LOG("novatek,irq-gpio=%d\n", ts->irq_gpio);
+#if NVT_TOUCH_SUPPORT_HW_RST
 	ts->reset_gpio = of_get_named_gpio_flags(np, "novatek,reset-gpio", 0, &ts->reset_flags);
 	NVT_LOG("novatek,reset-gpio=%d\n", ts->reset_gpio);
+#endif
+	ts->irq_gpio = of_get_named_gpio_flags(np, "novatek,irq-gpio", 0, &ts->irq_flags);
+	NVT_LOG("novatek,irq-gpio=%d\n", ts->irq_gpio);
+
 }
 #else
 static void nvt_parse_dt(struct device *dev)
 {
+#if NVT_TOUCH_SUPPORT_HW_RST
+	ts->reset_gpio = NVTTOUCH_RST_PIN;
+#endif
 	ts->irq_gpio = NVTTOUCH_INT_PIN;
 }
 #endif
@@ -906,6 +789,17 @@ static int nvt_gpio_config(struct nvt_ts_data *ts)
 {
 	int32_t ret = 0;
 
+#if NVT_TOUCH_SUPPORT_HW_RST
+	/* request RST-pin (Output/High) */
+	if (gpio_is_valid(ts->reset_gpio)) {
+		ret = gpio_request_one(ts->reset_gpio, GPIOF_OUT_INIT_HIGH, "NVT-tp-rst");
+		if (ret) {
+			NVT_ERR("Failed to request NVT-tp-rst GPIO\n");
+			goto err_request_reset_gpio;
+		}
+	}
+#endif
+
 	/* request INT-pin (Input) */
 	if (gpio_is_valid(ts->irq_gpio)) {
 		ret = gpio_request_one(ts->irq_gpio, GPIOF_IN, "NVT-int");
@@ -914,16 +808,14 @@ static int nvt_gpio_config(struct nvt_ts_data *ts)
 			goto err_request_irq_gpio;
 		}
 	}
-	if (gpio_is_valid(ts->reset_gpio)) {
-		ret = gpio_request(ts->reset_gpio,"NVT-reset");
-		if (ret) {
-			NVT_ERR("Failed to request NVT-int GPIO\n");
-			goto err_request_irq_gpio;
-		}
-	}
+
 	return ret;
 
 err_request_irq_gpio:
+#if NVT_TOUCH_SUPPORT_HW_RST
+	gpio_free(ts->reset_gpio);
+err_request_reset_gpio:
+#endif
 	return ret;
 }
 
@@ -1001,9 +893,6 @@ static void nvt_ts_work_func(struct work_struct *work)
 #endif /* MT_PROTOCOL_B */
 	int32_t i = 0;
 	int32_t finger_cnt = 0;
-	struct sched_param param = { .sched_priority = MAX_USER_RT_PRIO / 2 };
-
-	sched_setscheduler(current, SCHED_FIFO, &param);
 
 	mutex_lock(&ts->lock);
 
@@ -1112,6 +1001,10 @@ static void nvt_ts_work_func(struct work_struct *work)
 
 #if TOUCH_KEY_NUM > 0
 	if (point_data[61] == 0xF8) {
+#if NVT_TOUCH_ESD_PROTECT
+		/* update interrupt timer */
+		irq_timer = jiffies;
+#endif /* #if NVT_TOUCH_ESD_PROTECT */
 		for (i = 0; i < ts->max_button_num; i++) {
 			input_report_key(ts->input_dev, touch_key_array[i], ((point_data[62] >> i) & 0x01));
 		}
@@ -1154,6 +1047,77 @@ static irqreturn_t nvt_ts_irq_handler(int32_t irq, void *dev_id)
 
 /*******************************************************
 Description:
+	Novatek touchscreen check and stop crc reboot loop.
+
+return:
+	n.a.
+*******************************************************/
+void nvt_stop_crc_reboot(void)
+{
+	uint8_t buf[8] = {0};
+	int32_t retry = 0;
+
+
+
+
+	buf[0] = 0xFF;
+	buf[1] = 0x01;
+	buf[2] = 0xF6;
+	CTP_I2C_WRITE(ts->client, I2C_BLDR_Address, buf, 3);
+
+
+	buf[0] = 0x4E;
+	CTP_I2C_READ(ts->client, I2C_BLDR_Address, buf, 4);
+
+	if ((buf[1] == 0xFC) ||
+		((buf[1] == 0xFF) && (buf[2] == 0xFF) && (buf[3] == 0xFF))) {
+
+
+		for (retry = 5; retry > 0; retry--) {
+
+
+			buf[0]=0x00;
+			buf[1]=0xA5;
+			CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 2);
+
+
+			buf[0]=0x00;
+			buf[1]=0xA5;
+			CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 2);
+			msleep(1);
+
+
+			buf[0] = 0xFF;
+			buf[1] = 0x03;
+			buf[2] = 0xF1;
+			CTP_I2C_WRITE(ts->client, I2C_BLDR_Address, buf, 3);
+
+			buf[0] = 0x35;
+			buf[1] = 0xA5;
+			CTP_I2C_WRITE(ts->client, I2C_BLDR_Address, buf, 2);
+
+
+			buf[0] = 0xFF;
+			buf[1] = 0x03;
+			buf[2] = 0xF1;
+			CTP_I2C_WRITE(ts->client, I2C_BLDR_Address, buf, 3);
+
+			buf[0] = 0x35;
+			buf[1] = 0x00;
+			CTP_I2C_READ(ts->client, I2C_BLDR_Address, buf, 2);
+
+			if (buf[1] == 0xA5)
+				break;
+		}
+		if (retry == 0)
+			NVT_ERR("CRC auto reboot is not able to be stopped! buf[1]=0x%02X\n", buf[1]);
+	}
+
+	return;
+}
+
+/*******************************************************
+Description:
 	Novatek touchscreen check chip version trim function.
 
 return:
@@ -1168,9 +1132,10 @@ static int8_t nvt_ts_check_chip_ver_trim(void)
 	int32_t found_nvt_chip = 0;
 	int32_t ret = -1;
 
+	nvt_bootloader_reset();
+
 
 	for (retry = 5; retry > 0; retry--) {
-		nvt_bootloader_reset();
 		nvt_sw_reset_idle();
 
 		buf[0] = 0x00;
@@ -1193,6 +1158,13 @@ static int8_t nvt_ts_check_chip_ver_trim(void)
 		CTP_I2C_READ(ts->client, I2C_BLDR_Address, buf, 7);
 		NVT_LOG("buf[1]=0x%02X, buf[2]=0x%02X, buf[3]=0x%02X, buf[4]=0x%02X, buf[5]=0x%02X, buf[6]=0x%02X\n",
 			buf[1], buf[2], buf[3], buf[4], buf[5], buf[6]);
+
+
+		if ((buf[1] == 0xFC) ||
+			((buf[1] == 0xFF) && (buf[2] == 0xFF) && (buf[3] == 0xFF))) {
+			nvt_stop_crc_reboot();
+			continue;
+		}
 
 
 		for (list = 0; list < (sizeof(trim_id_table) / sizeof(struct nvt_ts_trim_id_table)); list++) {
@@ -1229,22 +1201,6 @@ out:
 	return ret;
 }
 
-static int lct_tp_gesture_node_callback(bool flag)
-{
-	if (suspend_state) {
-		NVT_ERR("ERROR: TP is suspend!\n");
-		return -1;
-	}
-	if(flag) {
-		enable_gesture_mode = true;
-		NVT_LOG("enable gesture mode\n");
-	} else {
-		enable_gesture_mode = false;
-		NVT_LOG("disable gesture mode\n");
-	}
-	return 0;
-}
-
 
 /*******************************************************
 Description:
@@ -1259,7 +1215,6 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 #if ((TOUCH_KEY_NUM > 0) || WAKEUP_GESTURE)
 	int32_t retry = 0;
 #endif
-	char fw_version[64];
 
 	NVT_LOG("start\n");
 
@@ -1291,6 +1246,7 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 
 
 	msleep(10);
+	
     ts->vcc_i2c = regulator_get(&client->dev, "vcc_i2c-supply");
     if (IS_ERR(ts->vcc_i2c))
     {
@@ -1311,6 +1267,7 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
     {
         NVT_ERR("Regulator vcc_i2c enable failed");
     }
+
 
 	ret = nvt_ts_check_chip_ver_trim();
 	if (ret) {
@@ -1368,8 +1325,8 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 #if TOUCH_MAX_FINGER_NUM > 1
 	input_set_abs_params(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);
 
-	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_X, 0, ts->abs_x_max - 1, 0, 0);
-	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, 0, ts->abs_y_max - 1, 0, 0);
+	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_X, 0, ts->abs_x_max-1, 0, 0);
+	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, 0, ts->abs_y_max-1, 0, 0);
 #if MT_PROTOCOL_B
 
 #else
@@ -1442,12 +1399,6 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 #endif /* #if NVT_TOUCH_ESD_PROTECT */
 
 
-
-	ret = init_lct_tp_gesture(lct_tp_gesture_node_callback);
-	if (ret < 0) {
-		NVT_ERR("Failed to add /proc/tp_work node!\n");
-	}
-
 #if NVT_TOUCH_PROC
 	ret = nvt_flash_proc_init();
 	if (ret != 0) {
@@ -1471,14 +1422,6 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 		goto err_init_NVT_ts;
 	}
 #endif
-
-  	memset(fw_version, 0, sizeof(fw_version));
-	sprintf(fw_version, "[FW]0x%02x,[IC]nvt36672", ts->fw_ver);
-	if (strstr(g_lcd_id,"tianma nt36672") != NULL) {
-		init_tp_fm_info(0, fw_version, "tianma");
-	} else {
-		init_tp_fm_info(0, fw_version, "huaxing");
-	}
 
 #if defined(CONFIG_FB)
 	ts->fb_notif.notifier_call = fb_notifier_callback;
@@ -1592,29 +1535,28 @@ static int32_t nvt_ts_suspend(struct device *dev)
 	nvt_esd_check_enable(false);
 #endif /* #if NVT_TOUCH_ESD_PROTECT */
 
-	if(enable_gesture_mode){
+	if (enable_gesture_mode) {
 
-		buf[0] = EVENT_MAP_HOST_CMD;
-		buf[1] = 0x13;
+	buf[0] = EVENT_MAP_HOST_CMD;
+	buf[1] = 0x13;
 #if 0
-		buf[2] = 0xFF;
-		buf[3] = 0xFF;
-		CTP_I2C_WRITE(ts->client, I2C_FW_Address, buf, 4);
+	buf[2] = 0xFF;
+	buf[3] = 0xFF;
+	CTP_I2C_WRITE(ts->client, I2C_FW_Address, buf, 4);
 #else
-		CTP_I2C_WRITE(ts->client, I2C_FW_Address, buf, 2);
+	CTP_I2C_WRITE(ts->client, I2C_FW_Address, buf, 2);
 #endif
 
-		enable_irq_wake(ts->client->irq);
+	enable_irq_wake(ts->client->irq);
 
-		NVT_LOG("Enabled touch wakeup gesture\n");
+	NVT_LOG("Enabled touch wakeup gesture\n");
+	} else {
+	disable_irq(ts->client->irq);
 
-	}else{
-		disable_irq(ts->client->irq);
 
-
-		buf[0] = EVENT_MAP_HOST_CMD;
-		buf[1] = 0x11;
-		CTP_I2C_WRITE(ts->client, I2C_FW_Address, buf, 2);
+	buf[0] = EVENT_MAP_HOST_CMD;
+	buf[1] = 0x11;
+	CTP_I2C_WRITE(ts->client, I2C_FW_Address, buf, 2);
 	}
 
 	/* release all touches */
@@ -1636,6 +1578,7 @@ static int32_t nvt_ts_suspend(struct device *dev)
 
 	mutex_unlock(&ts->lock);
 	suspend_state = true;
+
 	NVT_LOG("end\n");
 
 	return 0;
@@ -1660,20 +1603,23 @@ static int32_t nvt_ts_resume(struct device *dev)
 	NVT_LOG("start\n");
 
 
+#if NVT_TOUCH_SUPPORT_HW_RST
+	gpio_set_value(ts->reset_gpio, 1);
+#endif
 	nvt_bootloader_reset();
 	nvt_check_fw_reset_state(RESET_STATE_REK);
 
-	if (delay_gesture) {
-		enable_gesture_mode = !enable_gesture_mode;
-	}
+if (delay_gesture) {
+	enable_gesture_mode = !enable_gesture_mode;
+}
 
-	if (!enable_gesture_mode) {
-		enable_irq(ts->client->irq);
-	}
+if (!enable_gesture_mode) {
+	enable_irq(ts->client->irq);
+}
 
-	if (delay_gesture) {
-		enable_gesture_mode = !enable_gesture_mode;
-	}
+if (delay_gesture) {
+	enable_gesture_mode = !enable_gesture_mode;
+}
 
 #if NVT_TOUCH_ESD_PROTECT
 	queue_delayed_work(nvt_esd_check_wq, &nvt_esd_check_work,
@@ -1685,6 +1631,7 @@ static int32_t nvt_ts_resume(struct device *dev)
 	mutex_unlock(&ts->lock);
 	suspend_state = false;
 	delay_gesture = false;
+
 	NVT_LOG("end\n");
 
 	return 0;
@@ -1702,9 +1649,7 @@ static int fb_notifier_callback(struct notifier_block *self, unsigned long event
 	if (evdata && evdata->data && event == FB_EARLY_EVENT_BLANK) {
 		blank = evdata->data;
 		if (*blank == FB_BLANK_POWERDOWN) {
-		    if (ESD_TE_status == false) {
-				nvt_ts_suspend(&ts->client->dev);
-			}
+			nvt_ts_suspend(&ts->client->dev);
 		}
 	} else if (evdata && evdata->data && event == FB_EVENT_BLANK) {
 		blank = evdata->data;

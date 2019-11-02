@@ -40,9 +40,7 @@
 #if NVT_TOUCH_ESD_PROTECT
 #include <linux/jiffies.h>
 #endif /* #if NVT_TOUCH_ESD_PROTECT */
-
-#include "../lct_tp_gesture.h"
-
+extern bool tianma_jdi_flag;
 #if NVT_TOUCH_ESD_PROTECT
 static struct delayed_work nvt_esd_check_work;
 static struct workqueue_struct *nvt_esd_check_wq;
@@ -55,8 +53,6 @@ uint8_t esd_retry_max = 5;
 #if NVT_TOUCH_EXT_PROC
 extern int32_t nvt_extra_proc_init(void);
 #endif
-
-extern char g_lcd_id[128];
 
 #if NVT_TOUCH_MP
 extern int32_t nvt_mp_proc_init(void);
@@ -252,22 +248,50 @@ int nvt_gesture_switch(struct input_dev *dev, unsigned int type, unsigned int co
 	{
 		if (suspend_state)
 		{
-			if ((value != WAKEUP_OFF) || enable_gesture_mode)
+		     if ((value != WAKEUP_OFF) || enable_gesture_mode)
 			{
-				delay_gesture = true;
+			delay_gesture = true;
 			}
-		}
-		NVT_LOG("choose the gesture mode yes or not\n");
+		}  
+		NVT_LOG("choose the gesture mode yes or not/n");
 		if(value == WAKEUP_OFF){
-			NVT_LOG("disable gesture mode\n");
+			NVT_LOG("disable gesture mode/n");
 			enable_gesture_mode = false;
 		}else if(value == WAKEUP_ON){
-			NVT_LOG("enable gesture mode\n");
+			NVT_LOG("enable gesture mode/n");
 			enable_gesture_mode  = true;
 		}
 	}
 	return 0;
 }
+
+static int nvt_gesture_read(struct seq_file *file, void *v)
+{
+	seq_printf(file, "%d", enable_gesture_mode);
+	return 0;
+}
+ static int nvt_gesture_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, nvt_gesture_read, inode);
+}
+ static ssize_t nvt_gesture_write(struct file *file, const char __user *buf,
+			 size_t count, loff_t *ppos)
+{
+	uint8_t str;
+	if(copy_from_user(&str, buf, 1)); // ignore
+	enable_gesture_mode = (str == '1');
+	return 1;
+}
+ static const struct file_operations nvt_gesture_fops = {
+	.owner = THIS_MODULE,
+	.open = nvt_gesture_open,
+	.write = nvt_gesture_write,
+	.release = single_release,
+	.read = seq_read,
+	.llseek = seq_lseek,
+};
+#define NVT_GESTURE_NAME "nvt_wake_gesture"
+
 #endif
 
 static uint8_t bTouchIsAwake = 0;
@@ -1229,22 +1253,6 @@ out:
 	return ret;
 }
 
-static int lct_tp_gesture_node_callback(bool flag)
-{
-	if (suspend_state) {
-		NVT_ERR("ERROR: TP is suspend!\n");
-		return -1;
-	}
-	if(flag) {
-		enable_gesture_mode = true;
-		NVT_LOG("enable gesture mode\n");
-	} else {
-		enable_gesture_mode = false;
-		NVT_LOG("disable gesture mode\n");
-	}
-	return 0;
-}
-
 
 /*******************************************************
 Description:
@@ -1368,8 +1376,8 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 #if TOUCH_MAX_FINGER_NUM > 1
 	input_set_abs_params(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);
 
-	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_X, 0, ts->abs_x_max - 1, 0, 0);
-	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, 0, ts->abs_y_max - 1, 0, 0);
+	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_X, 0, ts->abs_x_max-1, 0, 0);
+	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, 0, ts->abs_y_max-1, 0, 0);
 #if MT_PROTOCOL_B
 
 #else
@@ -1388,6 +1396,10 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	for (retry = 0; retry < (sizeof(gesture_key_array) / sizeof(gesture_key_array[0])); retry++) {
 		input_set_capability(ts->input_dev, EV_KEY, gesture_key_array[retry]);
 	}
+
+	if(proc_create(NVT_GESTURE_NAME, 0666, NULL, &nvt_gesture_fops) == NULL)
+		NVT_ERR("error while create gesture");
+
 	wake_lock_init(&gestrue_wakelock, WAKE_LOCK_SUSPEND, "poll-wake-lock");
 #endif
 
@@ -1442,12 +1454,6 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 #endif /* #if NVT_TOUCH_ESD_PROTECT */
 
 
-
-	ret = init_lct_tp_gesture(lct_tp_gesture_node_callback);
-	if (ret < 0) {
-		NVT_ERR("Failed to add /proc/tp_work node!\n");
-	}
-
 #if NVT_TOUCH_PROC
 	ret = nvt_flash_proc_init();
 	if (ret != 0) {
@@ -1471,15 +1477,15 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 		goto err_init_NVT_ts;
 	}
 #endif
-
-  	memset(fw_version, 0, sizeof(fw_version));
-	sprintf(fw_version, "[FW]0x%02x,[IC]nvt36672", ts->fw_ver);
-	if (strstr(g_lcd_id,"tianma nt36672") != NULL) {
+	if (tianma_jdi_flag == 0) {
+		memset(fw_version, 0, sizeof(fw_version));
+		sprintf(fw_version, "[FW]0x%02x,[IC]nvt36672", ts->fw_ver);
 		init_tp_fm_info(0, fw_version, "tianma");
 	} else {
-		init_tp_fm_info(0, fw_version, "huaxing");
+		memset(fw_version, 0, sizeof(fw_version));
+		sprintf(fw_version, "[FW]0x%02x,[IC]nvt36672", ts->fw_ver);
+		init_tp_fm_info(0, fw_version, "jdi");
 	}
-
 #if defined(CONFIG_FB)
 	ts->fb_notif.notifier_call = fb_notifier_callback;
 	ret = fb_register_client(&ts->fb_notif);
@@ -1633,9 +1639,9 @@ static int32_t nvt_ts_suspend(struct device *dev)
 	input_sync(ts->input_dev);
 
 	msleep(50);
-
-	mutex_unlock(&ts->lock);
 	suspend_state = true;
+	mutex_unlock(&ts->lock);
+
 	NVT_LOG("end\n");
 
 	return 0;
@@ -1662,15 +1668,13 @@ static int32_t nvt_ts_resume(struct device *dev)
 
 	nvt_bootloader_reset();
 	nvt_check_fw_reset_state(RESET_STATE_REK);
-
 	if (delay_gesture) {
 		enable_gesture_mode = !enable_gesture_mode;
 	}
 
-	if (!enable_gesture_mode) {
+	if(!enable_gesture_mode) {
 		enable_irq(ts->client->irq);
 	}
-
 	if (delay_gesture) {
 		enable_gesture_mode = !enable_gesture_mode;
 	}
