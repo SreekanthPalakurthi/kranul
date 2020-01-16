@@ -39,6 +39,8 @@ Module.symvers
 *.dwo
 *.su
 out
+tc
+script_build.sh
 
 #
 # Top-level generic files
