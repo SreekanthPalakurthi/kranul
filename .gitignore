@@ -41,7 +41,11 @@ Module.symvers
 out
 tc
 script_build.sh
-
+anykernel
+clang
+gcc
+gcc32
+kranul.sh
 #
 # Top-level generic files
 #
