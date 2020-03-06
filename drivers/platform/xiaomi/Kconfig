@@ -1,0 +1,6 @@
+# Xiaomi newcam option
+
+config XIAOMI_NEW_CAMERA
+        bool "Xiaomi new camera blobs"
+        help
+          Support for new camera blobs
