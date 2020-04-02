@@ -2303,7 +2303,6 @@ static void dm_init_md_queue(struct mapped_device *md)
 	 * - must do so here (in alloc_dev callchain) before queue is used
 	 */
 	md->queue->queuedata = md;
-	md->queue->backing_dev_info->congested_data = md;
 }
 
 static void dm_init_old_md_queue(struct mapped_device *md)
