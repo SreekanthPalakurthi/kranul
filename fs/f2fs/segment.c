@@ -1026,7 +1026,7 @@ static void f2fs_submit_discard_endio(struct bio *bio)
 }
 
 /* copied from block/blk-lib.c in 4.10-rc1 */
-static int __blkdev_issue_discard(struct block_device *bdev, sector_t sector,
+static int f2fs__blkdev_issue_discard(struct block_device *bdev, sector_t sector,
 		sector_t nr_sects, gfp_t gfp_mask, int flags,
 		struct bio **biop)
 {
@@ -1229,7 +1229,7 @@ static int __submit_discard_cmd(struct f2fs_sb_info *sbi,
 			err = -EIO;
 			goto submit;
 		}
-		err = __blkdev_issue_discard(bdev,
+		err = f2fs__blkdev_issue_discard(bdev,
 					SECTOR_FROM_BLOCK(start),
 					SECTOR_FROM_BLOCK(len),
 					GFP_NOFS, 0, &bio);
