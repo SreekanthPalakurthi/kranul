@@ -1736,8 +1736,7 @@ static blk_qc_t blk_queue_bio(struct request_queue *q, struct bio *bio)
 		return BLK_QC_T_NONE;
 	}
 
-	if (bio->bi_rw & (REQ_FLUSH | REQ_FUA | REQ_POST_FLUSH_BARRIER |
-			  REQ_BARRIER)) {
+	if (bio->bi_rw & (REQ_FLUSH | REQ_FUA)) {
 		spin_lock_irq(q->queue_lock);
 		where = ELEVATOR_INSERT_FLUSH;
 		goto get_rq;
