@@ -43,6 +43,7 @@ tc
 script_build.sh
 anykernel
 clang
+aosp-clang
 gcc
 gcc32
 kranul.sh
