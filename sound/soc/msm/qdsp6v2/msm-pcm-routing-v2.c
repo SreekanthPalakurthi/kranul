@@ -8455,7 +8455,6 @@ static const struct snd_kcontrol_new pri_tdm_tx_3_mixer_controls[] = {
 	MSM_BACKEND_DAI_PRI_TDM_TX_3,
 	MSM_FRONTEND_DAI_MULTIMEDIA33, 1, 0, msm_routing_get_audio_mixer,
 	msm_routing_put_audio_mixer),
-
 };
 
 static const struct snd_kcontrol_new sec_tdm_rx_0_mixer_controls[] = {
