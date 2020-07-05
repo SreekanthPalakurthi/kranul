@@ -38,6 +38,7 @@ modules.builtin
 Module.symvers
 *.dwo
 *.su
+*.sh
 
 #
 # Top-level generic files
@@ -74,6 +75,11 @@ Module.symvers
 include/config
 include/generated
 arch/*/include/generated
+out
+anykernel
+clang
+gcc
+gcc32
 
 # stgit generated dirs
 patches-*
