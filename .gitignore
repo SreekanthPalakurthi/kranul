@@ -80,6 +80,8 @@ anykernel
 clang
 gcc
 gcc32
+arm32-gcc
+arm64-gcc
 
 # stgit generated dirs
 patches-*
