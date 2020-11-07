@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -61,6 +61,29 @@
 #else
 #define NUM_TX_QUEUES 4
 #endif
+
+/* HDD_IS_RATE_LIMIT_REQ: Macro helper to implement rate limiting
+ * @flag: The flag to determine if limiting is required or not
+ * @rate: The number of seconds within which if multiple commands come, the
+ *	  flag will be set to true
+ *
+ * If the function in which this macro is used is called multiple times within
+ * "rate" number of seconds, the "flag" will be set to true which can be used
+ * to reject/take appropriate action.
+ */
+#define HDD_IS_RATE_LIMIT_REQ(flag, rate)\
+	do {\
+		static ulong __last_ticks;\
+		ulong __ticks = jiffies;\
+		flag = false; \
+		if (!time_after(__ticks,\
+		    __last_ticks + rate * HZ)) {\
+			flag = true; \
+		} \
+		else { \
+			__last_ticks = __ticks;\
+		} \
+	} while (0)
 
 /*
  * API in_compat_syscall() is introduced in 4.6 kernel to check whether we're
@@ -339,6 +362,8 @@ static inline bool in_compat_syscall(void) { return is_compat_task(); }
 #define WLAN_NUD_STATS_ARP_PKT_TYPE 1
 /* Assigned size of driver memory dump is 4096 bytes */
 #define DRIVER_MEM_DUMP_SIZE    4096
+/* Max number of states supported by the driver for thermal mitigation */
+#define HDD_THERMAL_MAX_STATE 2
 
 /*
  * @eHDD_DRV_OP_PROBE: Refers to .probe operation
@@ -361,6 +386,7 @@ enum {
  * @eHDD_REASSOC_IN_PROGRESS: reassociation is in progress
  * @eHDD_EAPOL_IN_PROGRESS: STA/P2P-CLI is in middle of EAPOL/WPS exchange
  * @eHDD_SAP_EAPOL_IN_PROGRESS: SAP/P2P-GO is in middle of EAPOL/WPS exchange
+ * @eHDD_SAP_CONNECTION_IN_PROGRESS: SAP/P2P-GO is in middle of connection.
  */
 typedef enum {
 	eHDD_SCAN_REJECT_DEFAULT = 0,
@@ -368,6 +394,7 @@ typedef enum {
 	eHDD_REASSOC_IN_PROGRESS,
 	eHDD_EAPOL_IN_PROGRESS,
 	eHDD_SAP_EAPOL_IN_PROGRESS,
+	eHDD_SAP_CONNECTION_IN_PROGRESS,
 } scan_reject_states;
 
 #define MAX_PROBE_REQ_OUIS 16
@@ -1585,7 +1612,7 @@ struct hdd_adapter_s {
 	bool offloads_configured;
 
 	/* DSCP to UP QoS Mapping */
-	sme_QosWmmUpType hddWmmDscpToUpMap[WLAN_HDD_MAX_DSCP + 1];
+	sme_QosWmmUpType hddWmmDscpToUpMap[WLAN_MAX_DSCP + 1];
 
 #ifdef WLAN_FEATURE_LINK_LAYER_STATS
 	bool isLinkLayerStatsSet;
@@ -1940,6 +1967,21 @@ struct hdd_cache_channels {
 };
 
 /**
+ * enum hdd_thermal_states - The various thermal states as supported by WLAN
+ * @HDD_THERMAL_STATE_NORMAL - The normal working state
+ * @HDD_THERMAL_STATE_MEDIUM - The intermediate state, WLAN must perform partial
+ *                             mitigation
+ * @HDD_THERMAL_STATE_HIGH - The highest state, WLAN must enter forced IMPS and
+ *                           will disconnect any active STA connection
+ */
+enum hdd_thermal_states {
+	HDD_THERMAL_STATE_NORMAL = 0,
+	HDD_THERMAL_STATE_MEDIUM = 1,
+	HDD_THERMAL_STATE_HIGH = 2,
+	HDD_THERMAL_STATE_INVAL = 0xFF,
+};
+
+/**
  * struct hdd_context_s
  * @adapter_nodes: an array of adapter nodes for keeping track of hdd adapters
  */
@@ -2265,6 +2307,7 @@ struct hdd_context_s {
 	bool is_ssr_in_progress;
 
 	uint8_t pktcapture_mode;
+	bool is_thermal_system_registered;
 };
 
 int hdd_validate_channel_and_bandwidth(hdd_adapter_t *adapter,
@@ -3247,6 +3290,16 @@ hdd_station_info_t *hdd_get_stainfo(hdd_station_info_t *aStaInfo,
 
 int hdd_driver_memdump_init(void);
 void hdd_driver_memdump_deinit(void);
+
+/**
+ * hdd_driver_mem_cleanup() - Frees memory allocated for
+ * driver dump
+ *
+ * This function  frees driver dump memory.
+ *
+ * Return: None
+ */
+void hdd_driver_mem_cleanup(void);
 
 /**
  * wlan_hdd_free_cache_channels() - Free the cache channels list
