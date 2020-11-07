@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -288,6 +288,7 @@ const char *get_e_roam_cmd_status_str(eRoamCmdStatus val)
 		CASE_RETURN_STR(eCSR_ROAM_ABORT);
 		CASE_RETURN_STR(eCSR_ROAM_NAPI_OFF);
 		CASE_RETURN_STR(eCSR_ROAM_SAE_COMPUTE);
+		CASE_RETURN_STR(eCSR_ROAM_FIPS_PMK_REQUEST);
 	default:
 		return "unknown";
 	}
@@ -3083,6 +3084,8 @@ static void csr_check_sae_auth(tpAniSirGlobal mac_ctx,
 	   c_auth_suites, authentication)) {
 		if (eCSR_AUTH_TYPE_SAE == auth_type->authType[index])
 			*neg_authtype = eCSR_AUTH_TYPE_SAE;
+		if (eCSR_AUTH_TYPE_OPEN_SYSTEM == auth_type->authType[index])
+			*neg_authtype = eCSR_AUTH_TYPE_OPEN_SYSTEM;
 	}
 	sme_debug("negotiated auth type is %d", *neg_authtype);
 }
@@ -3094,6 +3097,32 @@ static void csr_check_sae_auth(tpAniSirGlobal mac_ctx,
 {
 }
 #endif
+
+bool csr_is_pmkid_found_for_peer(tpAniSirGlobal mac,
+				 tCsrRoamSession *session,
+				 tSirMacAddr peer_mac_addr,
+				 uint8_t *pmkid,
+				 uint16_t pmkid_count)
+{
+	uint32_t i, index;
+	uint8_t *session_pmkid;
+	tPmkidCacheInfo pmkid_cache;
+
+	qdf_mem_zero(&pmkid_cache, sizeof(pmkid_cache));
+	qdf_mem_copy(pmkid_cache.BSSID.bytes, peer_mac_addr, MAC_ADDR_LEN);
+
+	if (!csr_lookup_pmkid_using_bssid(mac, session, &pmkid_cache, &index))
+		return false;
+	session_pmkid = &session->PmkidCacheInfo[index].PMKID[0];
+	for (i = 0; i < pmkid_count; i++) {
+		if (!qdf_mem_cmp(pmkid + (i * CSR_RSN_PMKID_SIZE),
+				 session_pmkid, CSR_RSN_PMKID_SIZE))
+			return true;
+	}
+
+	sme_debug("PMKID in PmkidCacheInfo doesn't match with PMKIDs of peer");
+	return false;
+}
 
 /**
  * csr_get_rsn_information() - to get RSN infomation

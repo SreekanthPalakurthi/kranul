@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1215,12 +1215,8 @@ static QDF_STATUS lim_send_hal_start_scan_offload_req(tpAniSirGlobal pMac,
 	    pe_debug("No IEs in the scan request from supplicant");
 	}
 
-	/**
-	 * The tSirScanOffloadReq will reserve the space for first channel,
-	 * so allocate the memory for (numChannels - 1) and uIEFieldLen
-	 */
 	len = sizeof(tSirScanOffloadReq) +
-		(pScanReq->channelList.numChannels - 1) +
+		pScanReq->channelList.numChannels +
 		pScanReq->uIEFieldLen + pScanReq->oui_field_len;
 
 	pScanOffloadReq = qdf_mem_malloc(len);
@@ -1328,7 +1324,7 @@ static QDF_STATUS lim_send_hal_start_scan_offload_req(tpAniSirGlobal pMac,
 			     pScanReq->probe_req_ie_bitmap,
 			     PROBE_REQ_BITMAP_LEN * sizeof(uint32_t));
 	pScanOffloadReq->oui_field_offset = sizeof(tSirScanOffloadReq) +
-				(pScanOffloadReq->channelList.numChannels - 1) +
+				pScanOffloadReq->channelList.numChannels +
 				pScanOffloadReq->uIEFieldLen;
 	if (pScanOffloadReq->num_vendor_oui != 0) {
 		qdf_mem_copy(
@@ -3606,21 +3602,33 @@ void __lim_process_sme_assoc_cnf_new(tpAniSirGlobal mac_ctx, uint32_t msg_type,
 					session_entry);
 		goto end;
 	} else {
+		uint8_t add_pre_auth_context = true;
 		/*
 		 * SME_ASSOC_CNF status is non-success, so STA is not allowed
 		 * to be associated since the HAL sta entry is created for
 		 * denied STA we need to remove this HAL entry.
 		 * So to do that set updateContext to 1
 		 */
+		tSirMacStatusCodes mac_status_code =
+			eSIR_MAC_UNSPEC_FAILURE_STATUS;
 		if (!sta_ds->mlmStaContext.updateContext)
 			sta_ds->mlmStaContext.updateContext = 1;
-		pe_debug("Recv Assoc Cnf, status Code : %d(assoc id=%d)",
-			assoc_cnf.statusCode, sta_ds->assocId);
+		pe_debug("Recv Assoc Cnf, status Code : %d(assoc id=%d) Reason code: %d",
+			 assoc_cnf.statusCode, sta_ds->assocId,
+			 assoc_cnf.mac_status_code);
+		if (assoc_cnf.mac_status_code)
+			mac_status_code = assoc_cnf.mac_status_code;
+		if (assoc_cnf.mac_status_code == eSIR_MAC_INVALID_PMKID ||
+		    assoc_cnf.mac_status_code ==
+			eSIR_MAC_AUTH_ALGO_NOT_SUPPORTED_STATUS)
+			add_pre_auth_context = false;
+
 		lim_reject_association(mac_ctx, sta_ds->staAddr,
 				       sta_ds->mlmStaContext.subType,
-				       true, sta_ds->mlmStaContext.authType,
+				       add_pre_auth_context,
+				       sta_ds->mlmStaContext.authType,
 				       sta_ds->assocId, true,
-				       eSIR_MAC_UNSPEC_FAILURE_STATUS,
+				       mac_status_code,
 				       session_entry);
 	}
 end:
@@ -6011,6 +6019,8 @@ void lim_send_chan_switch_action_frame(tpAniSirGlobal mac_ctx,
 
 }
 
+#define MAX_WAKELOCK_FOR_CSA         5000
+
 /**
  * lim_process_sme_dfs_csa_ie_request() - process sme dfs csa ie req
  *
@@ -6130,6 +6140,9 @@ static void lim_process_sme_dfs_csa_ie_request(tpAniSirGlobal mac_ctx,
 		dfs_csa_ie_req->ch_params.center_freq_seg0;
 skip_vht:
 	/* Send CSA IE request from here */
+	qdf_wake_lock_timeout_acquire(&session_entry->ap_ecsa_wakelock,
+				      MAX_WAKELOCK_FOR_CSA);
+	qdf_runtime_pm_prevent_suspend(&session_entry->ap_ecsa_runtime_lock);
 	lim_send_dfs_chan_sw_ie_update(mac_ctx, session_entry);
 
 	if (dfs_csa_ie_req->ch_params.ch_width == CH_WIDTH_80MHZ)
