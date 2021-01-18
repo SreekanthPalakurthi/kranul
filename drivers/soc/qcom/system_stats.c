@@ -380,7 +380,7 @@ static int msm_rpmstats_probe(struct platform_device *pdev)
 		}
 		master_name_len = strlen(master_name);
 		strlcpy(ss.master[i], master_name,
-					strlen(ss.master[i]) + 1);
+					master_name_len + 1);
 	}
 
 	dent = debugfs_create_file("system_stats", S_IRUGO, NULL,
